@@ -14,24 +14,27 @@ export const onRequest = defineMiddleware(
     const user = session?.user;
 
     locals.isLoggedIn = isLoggedIn;
-if (user) {
-      // ✅ Traer rol desde tabla usuarios
+
+    if (user) {
+      // Traer nombre Y rol desde tabla usuarios (fuente de verdad)
       const { data: usuario } = await supabase
         .from('usuarios')
-        .select('rol')
+        .select('name, rol')
         .eq('email', user.email)
         .single();
 
       locals.user = {
         avatar: user.user_metadata?.avatar_url ?? '',
         email: user.email!,
-        name: user.user_metadata?.name ?? '',
+        // Prioriza el name de tu tabla; si no existe, usa el de Google/metadata
+        name: usuario?.name ?? user.user_metadata?.name ?? '',
         emailVerified: !!user.email_confirmed_at,
-        rol: usuario?.rol ?? 'usuario', // ✅ rol desde la tabla
+        rol: usuario?.rol ?? 'usuario',
       };
     }
 
     console.log({ isLoggedIn, user });
+
     if (!isLoggedIn && privateRoutes.includes(url.pathname)) {
       return redirect('/');
     }

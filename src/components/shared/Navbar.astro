@@ -1,6 +1,5 @@
 ---
 const { isLoggedIn } = Astro.locals;
-
 ---
 
 <!-- component -->
@@ -25,7 +24,7 @@ const { isLoggedIn } = Astro.locals;
             <a href="/login">Ingresar</a>
           </li>
         ) : (
-          <li id="logout" class="font-semibold text-gray-700">
+          <li id="logout" class="font-semibold text-gray-700 cursor-pointer select-none">
             <a href="#">Salir</a>
           </li>
         )
@@ -77,8 +76,17 @@ const { isLoggedIn } = Astro.locals;
 
   const logoutElem = document.querySelector('#logout') as HTMLLIElement;
 
-  logoutElem?.addEventListener('click', () => {
-    actions.logout();
-    window.location.href = '/';
+  logoutElem?.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    try {
+      const { error } = await actions.logout();
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+    } finally {
+      // Redirigir siempre, incluso si hay error, para limpiar el estado del cliente
+      window.location.href = '/';
+    }
   });
 </script>
