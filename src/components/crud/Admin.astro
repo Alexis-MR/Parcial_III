@@ -1,0 +1,227 @@
+---
+import { createSupabaseServerClient } from '@/lib/supabase';
+
+//iconos
+import {Plus,Search } from 'lucide-astro';
+
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+const { data: usuarios } = await supabase
+  .from('usuarios')
+  .select('*')
+  .order('id', { ascending: true });
+---
+
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+  
+  <!-- Header -->
+  <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+    <h1 class="text-lg font-semibold text-slate-800">Gestión de Usuarios</h1>
+    <span id="total-count" class="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+      {usuarios?.length ?? 0} usuarios
+    </span>
+  </div>
+
+  <!-- botonera superior-->
+<div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+    <button
+      id="btn-add"
+      class="text-xs bg-green-50 hover:bg-green-100 text-green-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium flex items-center gap-1"
+    >
+      <Plus class="h-4 w-4" />
+      Agregar Usuario
+    </button>
+
+    <div class="relative ml-auto">
+      <input
+        id="search-input"
+        type="text"
+        placeholder="Buscar por nombre o email..."
+        class="text-xs border border-slate-200 rounded-lg px-3 py-1.5 pl-8 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
+      />
+      <Search class="h-4 w-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400" />
+    </div>
+  </div>
+
+</div>
+  <!-- Tabla -->
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+          <th class="px-6 py-3 text-left">ID</th>
+          <th class="px-6 py-3 text-left">Nombre</th>
+          <th class="px-6 py-3 text-left">Email</th>
+          <th class="px-6 py-3 text-left">Rol</th>
+          <th class="px-6 py-3 text-left">Creado</th>
+          <th class="px-6 py-3 text-left">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body" class="divide-y divide-slate-100">
+        {usuarios?.map((u) => (
+          <tr
+            class="hover:bg-slate-50 transition-colors usuario-row"
+            data-name={u.name?.toLowerCase()}
+            data-email={u.email?.toLowerCase()}
+          >
+            <td class="px-6 py-4 text-sm text-slate-400">#{u.id}</td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                  <span class="text-white text-xs font-bold">
+                    {u.name?.substring(0, 2).toUpperCase() ?? 'NA'}
+                  </span>
+                </div>
+                <span class="text-sm font-medium text-slate-700">{u.name}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-500">{u.email}</td>
+            <td class="px-6 py-4">
+              <span class={`text-xs px-2 py-1 rounded-full font-medium ${u.rol === 'admin' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                {u.rol}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-400">
+              {u.created_at ? new Date(u.created_at).toLocaleDateString('es-ES') : '—'}
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex gap-2">
+                <button
+                  class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium"
+                  data-id={u.id}
+                  data-action="edit"
+                >
+                  Editar
+                </button>
+                <button
+                  class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium"
+                  data-id={u.id}
+                  data-action="delete"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <!-- Sin resultados -->
+    <div id="no-results" class="hidden text-center py-12 text-slate-400 text-sm">
+      No se encontraron usuarios
+    </div>
+  </div>
+
+  <!-- Paginador -->
+  <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+    <span id="pagination-info" class="text-xs text-slate-400"></span>
+    <div class="flex gap-2">
+      <button
+        id="btn-prev"
+        class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        ← Anterior
+      </button>
+      <div id="page-numbers" class="flex gap-1"></div>
+      <button
+        id="btn-next"
+        class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        Siguiente →
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PER_PAGE = 5;
+  let currentPage = 1;
+  let filteredRows: HTMLElement[] = [];
+
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  const btnPrev = document.getElementById('btn-prev') as HTMLButtonElement;
+  const btnNext = document.getElementById('btn-next') as HTMLButtonElement;
+  const pageNumbers = document.getElementById('page-numbers')!;
+  const paginationInfo = document.getElementById('pagination-info')!;
+  const noResults = document.getElementById('no-results')!;
+  const totalCount = document.getElementById('total-count')!;
+
+  const allRows = Array.from(document.querySelectorAll('.usuario-row')) as HTMLElement[];
+
+  function getFilteredRows(query: string): HTMLElement[] {
+    if (!query) return allRows;
+    return allRows.filter(row =>
+      row.dataset.name?.includes(query) ||
+      row.dataset.email?.includes(query)
+    );
+  }
+
+  function renderPage() {
+    const totalPages = Math.ceil(filteredRows.length / PER_PAGE);
+    const start = (currentPage - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+
+    // Mostrar/ocultar filas
+    allRows.forEach(row => row.classList.add('hidden'));
+    filteredRows.slice(start, end).forEach(row => row.classList.remove('hidden'));
+
+    // Sin resultados
+    noResults.classList.toggle('hidden', filteredRows.length > 0);
+
+    // Info paginación
+    paginationInfo.textContent = filteredRows.length > 0
+      ? `Mostrando ${start + 1}–${Math.min(end, filteredRows.length)} de ${filteredRows.length}`
+      : '';
+
+    // Contador header
+    totalCount.textContent = `${filteredRows.length} usuarios`;
+
+    // Botones prev/next
+    btnPrev.disabled = currentPage === 1;
+    btnNext.disabled = currentPage >= totalPages;
+
+    // Números de página
+    pageNumbers.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = String(i);
+      btn.className = `text-xs px-3 py-1.5 rounded-lg transition-colors ${
+        i === currentPage
+          ? 'bg-green-400 text-white'
+          : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+      }`;
+      btn.addEventListener('click', () => {
+        currentPage = i;
+        renderPage();
+      });
+      pageNumbers.appendChild(btn);
+    }
+  }
+
+  // Buscador con keyup
+  searchInput.addEventListener('keyup', () => {
+    const query = searchInput.value.toLowerCase().trim();
+    filteredRows = getFilteredRows(query);
+    currentPage = 1;
+    renderPage();
+  });
+
+  // Prev / Next
+  btnPrev.addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; renderPage(); }
+  });
+
+  btnNext.addEventListener('click', () => {
+    const totalPages = Math.ceil(filteredRows.length / PER_PAGE);
+    if (currentPage < totalPages) { currentPage++; renderPage(); }
+  });
+
+  // Init
+  filteredRows = allRows;
+  renderPage();
+</script>

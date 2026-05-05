@@ -1,0 +1,71 @@
+---
+import Admin from '@/components/crud/Admin.astro';
+import MainLayout from '@/layouts/MainLayout.astro';
+import { Image } from 'astro:assets';
+
+const { user, isLoggedIn } = Astro.locals;
+
+if (!isLoggedIn || !user) {
+  return Astro.redirect('/login');
+}
+
+const { avatar, email, emailVerified, name, rol } = user;
+---
+
+<MainLayout>
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    
+    <!-- Header con datos del usuario -->
+    <div class="max-w-7xl mx-auto">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center gap-4 mb-6">
+        
+        <!-- Avatar -->
+        {avatar ? (
+          <Image
+            class="w-12 h-12 rounded-full border-2 border-slate-200 object-cover"
+            src={avatar}
+            alt={`Avatar de ${name}`}
+            height={48}
+            width={48}
+          />
+        ) : (
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-sm font-bold">
+              {name!.substring(0, 2).toUpperCase()}
+            </span>
+          </div>
+        )}
+
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-slate-800 truncate">{name}</h2>
+            <span class={`text-xs px-2 py-0.5 rounded-full font-medium ${rol === 'admin' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+              {rol}
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 truncate">{email}</p>
+        </div>
+
+        <!-- Email verificado -->
+        <div class={`flex items-center gap-1 text-xs px-3 py-1 rounded-full ${emailVerified ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+          <span>{emailVerified ? '✓ Verificado' : '⚠ No verificado'}</span>
+        </div>
+      </div>
+
+      <!-- Tabla Admin -->
+      {rol === 'admin' && (
+        <Admin />
+      )}
+
+      <!-- Vista usuario normal -->
+      {rol !== 'admin' && (
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+          <div class="text-5xl mb-4">👋</div>
+          <h3 class="text-xl font-semibold text-slate-700">Bienvenido, {name}</h3>
+          <p class="text-slate-400 mt-2">No tienes permisos de administrador.</p>
+        </div>
+      )}
+    </div>
+  </div>
+</MainLayout>
