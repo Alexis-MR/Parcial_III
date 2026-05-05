@@ -1,9 +1,6 @@
 ---
 import { createSupabaseServerClient } from '@/lib/supabase';
-
-//iconos
-import {Plus,Search } from 'lucide-astro';
-
+import { Plus, Search, FileText } from 'lucide-astro';
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -17,7 +14,7 @@ const { data: usuarios } = await supabase
 ---
 
 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-  
+
   <!-- Header -->
   <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
     <h1 class="text-lg font-semibold text-slate-800">Gestión de Usuarios</h1>
@@ -26,14 +23,22 @@ const { data: usuarios } = await supabase
     </span>
   </div>
 
-  <!-- botonera superior-->
-<div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+  <!-- Botonera superior -->
+  <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
     <button
       id="btn-add"
       class="text-xs bg-green-50 hover:bg-green-100 text-green-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium flex items-center gap-1"
     >
       <Plus class="h-4 w-4" />
       Agregar Usuario
+    </button>
+
+    <button
+      id="btn-pdf"
+      class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium flex items-center gap-1"
+    >
+      <FileText class="h-4 w-4" />
+      Exportar PDF
     </button>
 
     <div class="relative ml-auto">
@@ -47,7 +52,6 @@ const { data: usuarios } = await supabase
     </div>
   </div>
 
-</div>
   <!-- Tabla -->
   <div class="overflow-x-auto">
     <table class="w-full">
@@ -67,21 +71,26 @@ const { data: usuarios } = await supabase
             class="hover:bg-slate-50 transition-colors usuario-row"
             data-name={u.name?.toLowerCase()}
             data-email={u.email?.toLowerCase()}
+            data-id={String(u.id)}
+            data-fullname={u.name}
+            data-fullemail={u.email}
+            data-rol={u.rol}
+            data-created={u.created_at ?? ''}
           >
             <td class="px-6 py-4 text-sm text-slate-400">#{u.id}</td>
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                  <span class="text-white text-xs font-bold">
+                  <span class="text-white text-xs font-bold user-initials">
                     {u.name?.substring(0, 2).toUpperCase() ?? 'NA'}
                   </span>
                 </div>
-                <span class="text-sm font-medium text-slate-700">{u.name}</span>
+                <span class="text-sm font-medium text-slate-700 user-name-display">{u.name}</span>
               </div>
             </td>
-            <td class="px-6 py-4 text-sm text-slate-500">{u.email}</td>
+            <td class="px-6 py-4 text-sm text-slate-500 user-email-display">{u.email}</td>
             <td class="px-6 py-4">
-              <span class={`text-xs px-2 py-1 rounded-full font-medium ${u.rol === 'admin' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+              <span class={`text-xs px-2 py-1 rounded-full font-medium user-rol-badge ${u.rol === 'admin' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
                 {u.rol}
               </span>
             </td>
@@ -92,14 +101,14 @@ const { data: usuarios } = await supabase
               <div class="flex gap-2">
                 <button
                   class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium"
-                  data-id={u.id}
+                  data-id={String(u.id)}
                   data-action="edit"
                 >
                   Editar
                 </button>
                 <button
                   class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium"
-                  data-id={u.id}
+                  data-id={String(u.id)}
                   data-action="delete"
                 >
                   Eliminar
@@ -111,7 +120,6 @@ const { data: usuarios } = await supabase
       </tbody>
     </table>
 
-    <!-- Sin resultados -->
     <div id="no-results" class="hidden text-center py-12 text-slate-400 text-sm">
       No se encontraron usuarios
     </div>
@@ -121,107 +129,360 @@ const { data: usuarios } = await supabase
   <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
     <span id="pagination-info" class="text-xs text-slate-400"></span>
     <div class="flex gap-2">
-      <button
-        id="btn-prev"
-        class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-      >
+      <button id="btn-prev" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
         ← Anterior
       </button>
       <div id="page-numbers" class="flex gap-1"></div>
-      <button
-        id="btn-next"
-        class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-      >
+      <button id="btn-next" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
         Siguiente →
       </button>
     </div>
   </div>
 </div>
 
+<!-- ===================== MODAL EDITAR ===================== -->
+<div id="modal-edit" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md mx-4 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="text-base font-semibold text-slate-800">Editar Usuario</h2>
+      <button id="modal-close" class="text-slate-400 hover:text-slate-600 transition-colors text-xl leading-none">&times;</button>
+    </div>
+
+    <div class="px-6 py-5 space-y-4">
+      <input type="hidden" id="edit-id" />
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Nombre</label>
+        <input id="edit-name" type="text"
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
+          placeholder="Nombre completo" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
+        <input id="edit-email" type="email"
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
+          placeholder="correo@ejemplo.com" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Rol</label>
+        <!-- IMPORTANTE: los valores deben coincidir exactamente con tu constraint en Supabase -->
+        <!-- Si el error persiste, revisa en Supabase: Table Editor > usuarios > columna rol > Check constraints -->
+        <select id="edit-rol"
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors bg-white">
+          <option value="usuario">usuario</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+
+      <div id="edit-message" class="hidden text-xs px-3 py-2 rounded-lg"></div>
+    </div>
+
+    <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+      <button id="modal-cancel"
+        class="text-xs px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium">
+        Cancelar
+      </button>
+      <button id="modal-save"
+        class="text-xs px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors font-medium flex items-center gap-2">
+        <span id="modal-save-text">Guardar cambios</span>
+        <span id="modal-spinner" class="hidden w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
+  // ===================== PAGINACIÓN =====================
   const PER_PAGE = 5;
   let currentPage = 1;
   let filteredRows: HTMLElement[] = [];
 
-  const searchInput = document.getElementById('search-input') as HTMLInputElement;
-  const btnPrev = document.getElementById('btn-prev') as HTMLButtonElement;
-  const btnNext = document.getElementById('btn-next') as HTMLButtonElement;
-  const pageNumbers = document.getElementById('page-numbers')!;
+  const searchInput    = document.getElementById('search-input')    as HTMLInputElement;
+  const btnPrev        = document.getElementById('btn-prev')        as HTMLButtonElement;
+  const btnNext        = document.getElementById('btn-next')        as HTMLButtonElement;
+  const pageNumbers    = document.getElementById('page-numbers')!;
   const paginationInfo = document.getElementById('pagination-info')!;
-  const noResults = document.getElementById('no-results')!;
-  const totalCount = document.getElementById('total-count')!;
+  const noResults      = document.getElementById('no-results')!;
+  const totalCount     = document.getElementById('total-count')!;
+  const allRows        = Array.from(document.querySelectorAll('.usuario-row')) as HTMLElement[];
 
-  const allRows = Array.from(document.querySelectorAll('.usuario-row')) as HTMLElement[];
-
-  function getFilteredRows(query: string): HTMLElement[] {
-    if (!query) return allRows;
-    return allRows.filter(row =>
-      row.dataset.name?.includes(query) ||
-      row.dataset.email?.includes(query)
-    );
+  function getFilteredRows(q: string) {
+    return q ? allRows.filter(r => r.dataset.name?.includes(q) || r.dataset.email?.includes(q)) : allRows;
   }
 
   function renderPage() {
-    const totalPages = Math.ceil(filteredRows.length / PER_PAGE);
+    const total = Math.ceil(filteredRows.length / PER_PAGE);
     const start = (currentPage - 1) * PER_PAGE;
-    const end = start + PER_PAGE;
-
-    // Mostrar/ocultar filas
-    allRows.forEach(row => row.classList.add('hidden'));
-    filteredRows.slice(start, end).forEach(row => row.classList.remove('hidden'));
-
-    // Sin resultados
+    const end   = start + PER_PAGE;
+    allRows.forEach(r => r.classList.add('hidden'));
+    filteredRows.slice(start, end).forEach(r => r.classList.remove('hidden'));
     noResults.classList.toggle('hidden', filteredRows.length > 0);
-
-    // Info paginación
-    paginationInfo.textContent = filteredRows.length > 0
+    paginationInfo.textContent = filteredRows.length
       ? `Mostrando ${start + 1}–${Math.min(end, filteredRows.length)} de ${filteredRows.length}`
       : '';
-
-    // Contador header
     totalCount.textContent = `${filteredRows.length} usuarios`;
-
-    // Botones prev/next
     btnPrev.disabled = currentPage === 1;
-    btnNext.disabled = currentPage >= totalPages;
-
-    // Números de página
+    btnNext.disabled = currentPage >= total;
     pageNumbers.innerHTML = '';
-    for (let i = 1; i <= totalPages; i++) {
-      const btn = document.createElement('button');
-      btn.textContent = String(i);
-      btn.className = `text-xs px-3 py-1.5 rounded-lg transition-colors ${
-        i === currentPage
-          ? 'bg-green-400 text-white'
-          : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-      }`;
-      btn.addEventListener('click', () => {
-        currentPage = i;
-        renderPage();
-      });
-      pageNumbers.appendChild(btn);
+    for (let i = 1; i <= total; i++) {
+      const b = document.createElement('button');
+      b.textContent = String(i);
+      b.className = `text-xs px-3 py-1.5 rounded-lg transition-colors ${i === currentPage ? 'bg-green-400 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`;
+      b.addEventListener('click', () => { currentPage = i; renderPage(); });
+      pageNumbers.appendChild(b);
     }
   }
 
-  // Buscador con keyup
   searchInput.addEventListener('keyup', () => {
-    const query = searchInput.value.toLowerCase().trim();
-    filteredRows = getFilteredRows(query);
-    currentPage = 1;
-    renderPage();
+    filteredRows = getFilteredRows(searchInput.value.toLowerCase().trim());
+    currentPage = 1; renderPage();
   });
-
-  // Prev / Next
-  btnPrev.addEventListener('click', () => {
-    if (currentPage > 1) { currentPage--; renderPage(); }
-  });
-
-  btnNext.addEventListener('click', () => {
-    const totalPages = Math.ceil(filteredRows.length / PER_PAGE);
-    if (currentPage < totalPages) { currentPage++; renderPage(); }
-  });
-
-  // Init
+  btnPrev.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPage(); } });
+  btnNext.addEventListener('click', () => { if (currentPage < Math.ceil(filteredRows.length / PER_PAGE)) { currentPage++; renderPage(); } });
   filteredRows = allRows;
   renderPage();
+
+  // ===================== MODAL =====================
+  const modal         = document.getElementById('modal-edit')!;
+  const modalClose    = document.getElementById('modal-close')!;
+  const modalCancel   = document.getElementById('modal-cancel')!;
+  const modalSave     = document.getElementById('modal-save') as HTMLButtonElement;
+  const modalSaveText = document.getElementById('modal-save-text')!;
+  const modalSpinner  = document.getElementById('modal-spinner')!;
+  const editMessage   = document.getElementById('edit-message')!;
+  const editId        = document.getElementById('edit-id')    as HTMLInputElement;
+  const editName      = document.getElementById('edit-name')  as HTMLInputElement;
+  const editEmail     = document.getElementById('edit-email') as HTMLInputElement;
+  const editRol       = document.getElementById('edit-rol')   as HTMLSelectElement;
+
+  const openModal = (row: HTMLElement) => {
+    editId.value    = row.dataset.id ?? '';
+    editName.value  = row.dataset.fullname ?? '';
+    editEmail.value = row.dataset.fullemail ?? '';
+    editRol.value   = row.dataset.rol ?? 'usuario';
+    editMessage.className = 'hidden';
+    editMessage.textContent = '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  };
+
+  const closeModal = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+
+  const showMsg = (msg: string, type: 'success' | 'error') => {
+    editMessage.textContent = msg;
+    editMessage.className = `text-xs px-3 py-2 rounded-lg ${type === 'success'
+      ? 'bg-green-50 text-green-700 border border-green-200'
+      : 'bg-red-50 text-red-700 border border-red-200'}`;
+  };
+
+  const setLoading = (on: boolean) => {
+    modalSave.disabled = on;
+    modalSaveText.textContent = on ? 'Guardando...' : 'Guardar cambios';
+    modalSpinner.classList.toggle('hidden', !on);
+  };
+
+  modalClose.addEventListener('click', closeModal);
+  modalCancel.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+  modalSave.addEventListener('click', async () => {
+    const id    = editId.value;
+    const name  = editName.value.trim();
+    const email = editEmail.value.trim();
+    const rol   = editRol.value;
+
+    if (!name || !email) { showMsg('Completa todos los campos.', 'error'); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/usuarios/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, rol }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message ?? 'Error al actualizar');
+      }
+
+      // Actualizar DOM sin recargar
+      const row = document.querySelector(`.usuario-row[data-id="${id}"]`) as HTMLElement;
+      if (row) {
+        row.dataset.fullname  = name;
+        row.dataset.fullemail = email;
+        row.dataset.rol       = rol;
+        row.dataset.name      = name.toLowerCase();
+        row.dataset.email     = email.toLowerCase();
+
+        const nameEl = row.querySelector('.user-name-display');
+        if (nameEl) nameEl.textContent = name;
+
+        const emailEl = row.querySelector('.user-email-display');
+        if (emailEl) emailEl.textContent = email;
+
+        const rolBadge = row.querySelector('.user-rol-badge');
+        if (rolBadge) {
+          rolBadge.textContent = rol;
+          rolBadge.className = `text-xs px-2 py-1 rounded-full font-medium user-rol-badge ${
+            rol === 'admin' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+          }`;
+        }
+
+        const initials = row.querySelector('.user-initials');
+        if (initials) initials.textContent = name.substring(0, 2).toUpperCase();
+      }
+
+      showMsg('Usuario actualizado correctamente.', 'success');
+      setTimeout(closeModal, 1200);
+    } catch (err: any) {
+      showMsg(err.message ?? 'Error inesperado.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ===================== PDF GLOBAL (sin autotable, jsPDF puro) =====================
+  document.getElementById('btn-pdf')?.addEventListener('click', async () => {
+    // Carga dinámica de jsPDF para evitar problemas de timing con script tags
+    if (!(window as any).jspdf) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('No se pudo cargar jsPDF'));
+        document.head.appendChild(s);
+      });
+    }
+
+    // @ts-ignore
+    const { jsPDF } = window.jspdf;
+    const doc  = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();   // 297mm
+    const pageH = doc.internal.pageSize.getHeight();  // 210mm
+
+    // ── Encabezado ──
+    doc.setFillColor(34, 197, 94);
+    doc.rect(0, 0, pageW, 26, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text('Reporte de Usuarios', pageW / 2, 12, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Uni-Space Technologies S.A. de C.V.', pageW / 2, 20, { align: 'center' });
+
+    // ── Configuración de tabla ──
+    const cols = [
+      { header: 'ID',                 w: 16  },
+      { header: 'Nombre',             w: 60  },
+      { header: 'Email',              w: 80  },
+      { header: 'Rol',                w: 24  },
+      { header: 'Fecha de Registro',  w: 38  },
+    ];
+    const marginL  = 14;
+    const rowH     = 8;
+    const headerH  = 9;
+    let   curY     = 32;
+
+    // Colores
+    const COL_HEADER_BG  = [30,  41,  59];   // slate-800
+    const COL_ROW_ALT    = [248, 250, 252];   // slate-50
+    const COL_BORDER     = [226, 232, 240];   // slate-200
+    const COL_TEXT_DARK  = [30,  41,  59];
+    const COL_TEXT_LIGHT = [100, 116, 139];   // slate-500
+
+    const drawHeader = () => {
+      doc.setFillColor(...COL_HEADER_BG as [number,number,number]);
+      doc.rect(marginL, curY, cols.reduce((a, c) => a + c.w, 0), headerH, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      let x = marginL;
+      cols.forEach(col => {
+        doc.text(col.header, x + 2, curY + 6);
+        x += col.w;
+      });
+      curY += headerH;
+    };
+
+    const drawRow = (cells: string[], rowIndex: number) => {
+      // Salto de página si es necesario
+      if (curY + rowH > pageH - 14) {
+        doc.addPage();
+        curY = 14;
+        drawHeader();
+      }
+
+      // Fondo alterno
+      if (rowIndex % 2 === 1) {
+        doc.setFillColor(...COL_ROW_ALT as [number,number,number]);
+        doc.rect(marginL, curY, cols.reduce((a, c) => a + c.w, 0), rowH, 'F');
+      }
+
+      // Borde inferior fila
+      doc.setDrawColor(...COL_BORDER as [number,number,number]);
+      doc.setLineWidth(0.1);
+      doc.line(marginL, curY + rowH, marginL + cols.reduce((a, c) => a + c.w, 0), curY + rowH);
+
+      // Texto
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      let x = marginL;
+      cells.forEach((cell, ci) => {
+        const col = cols[ci];
+        const isId  = ci === 0;
+        const isRol = ci === 3;
+        doc.setTextColor(...(isId || isRol ? COL_TEXT_LIGHT : COL_TEXT_DARK) as [number,number,number]);
+        // Truncar si el texto es muy largo
+        const maxW = col.w - 4;
+        const txt  = doc.splitTextToSize(cell, maxW)[0] ?? '';
+        doc.text(txt, x + 2, curY + 5.5);
+        x += col.w;
+      });
+
+      curY += rowH;
+    };
+
+    drawHeader();
+
+    // ── Datos ──
+    const rows = Array.from(document.querySelectorAll('.usuario-row')) as HTMLElement[];
+    rows.forEach((row, i) => {
+      drawRow([
+        `#${row.dataset.id}`,
+        row.dataset.fullname  ?? '',
+        row.dataset.fullemail ?? '',
+        (row.dataset.rol ?? '').toUpperCase(),
+        row.dataset.created
+          ? new Date(row.dataset.created).toLocaleDateString('es-ES')
+          : '—',
+      ], i);
+    });
+
+    // ── Footer ──
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `Generado el ${new Date().toLocaleDateString('es-ES')} · Total: ${rows.length} usuarios · Página ${p} de ${totalPages}`,
+        pageW / 2, pageH - 6, { align: 'center' }
+      );
+    }
+
+    doc.save(`reporte_usuarios_${new Date().toISOString().slice(0, 10)}.pdf`);
+  });
+
+  // ===================== DELEGACIÓN DE EVENTOS =====================
+  document.getElementById('tabla-body')?.addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest('button[data-action]') as HTMLElement | null;
+    if (!btn) return;
+    const row = document.querySelector(`.usuario-row[data-id="${btn.dataset.id}"]`) as HTMLElement;
+    if (!row) return;
+    if (btn.dataset.action === 'edit') openModal(row);
+  });
 </script>
