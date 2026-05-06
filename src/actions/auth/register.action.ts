@@ -54,7 +54,7 @@ export const registerUser = defineAction({
     remember_me: z.boolean().optional(),
   }),
 
-  handler: async ({ name, email, password, remember_me }, context) => {
+  handler: async ({ name, email, password,telefono, direccion, remember_me }, context) => {
     const { cookies, request } = context;
     const supabase = createSupabaseServerClient({ request, cookies });
 
@@ -79,7 +79,7 @@ export const registerUser = defineAction({
         email,
         password,
         options: {
-          data: { name },
+          data: { name, telefono, direccion },
           emailRedirectTo: 'http://localhost:4321/protected?emailVerified=true',
         },
       });
