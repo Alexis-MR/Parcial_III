@@ -1,0 +1,121 @@
+---
+
+---
+
+<div>
+
+
+   <div class="flex justify-center self-center  z-10">
+        <div class="p-12 bg-white mx-auto rounded-2xl w-100 ">
+            <div class="mb-4">
+              <h3 class="font-semibold text-2xl text-gray-800">Agregar </h3>
+            </div>
+            
+          <form class="space-y-5">
+
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-gray-700 tracking-wide">Nombre</label>
+              <input class=" w-full text-base px-4 py-2 border  border-gray-300 rounded-lg focus:outline-none focus:border-green-400" type="text" name="name" placeholder="John Doe" />
+              </div>
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-gray-700 tracking-wide">Email</label>
+              <input class=" w-full text-base px-4 py-2 border  border-gray-300 rounded-lg focus:outline-none focus:border-green-400" type="email" name="email" placeholder="mail@gmail.com" />
+              </div>
+            <div class="space-y-2">
+              <label class="mb-5 text-sm font-medium text-gray-700 tracking-wide">
+                Password
+              </label>
+              <input class="w-full content-center text-base px-4 py-2 border  border-gray-300 rounded-lg focus:outline-none focus:border-green-400" type="password" name="password" placeholder="Enter your password">
+            </div>
+            <div class="space-y-2">
+              <label class="mb-5 text-sm font-medium text-gray-700 tracking-wide">
+                Telefono
+              </label>
+              <input class="w-full content-center text-base px-4 py-2 border  border-gray-300 rounded-lg focus:outline-none focus:border-green-400" type="text" name="telefono" placeholder="Enter your phone number">
+            </div>
+            <div class="space-y-2">
+              <label class="mb-5 text-sm font-medium text-gray-700 tracking-wide">
+                Direccion
+              </label>
+              <input class="w-full content-center text-base px-4 py-2 border  border-gray-300 rounded-lg focus:outline-none focus:border-green-400" type="text" name="direccion" placeholder="Enter your address">
+            </div>
+                          <button type="submit" id="btn-submit" class="disabled:bg-gray-30 w-full flex justify-center bg-green-400  hover:bg-green-500 text-gray-100 p-3  rounded-full tracking-wide font-semibold  shadow-lg cursor-pointer transition ease-in duration-500">
+               Guardar
+              </button>
+        
+          </form>
+
+            <div class="pt-5 text-center text-gray-400 text-xs">
+              <span>
+
+                <a href="https://codepen.io/uidesignhub" rel="" target="_blank" title="Ajimon" class="text-green hover:text-green-500 ">AJI</a></span>
+            </div>
+        </div>
+      </div>
+
+</div>
+
+<script>
+  import { actions } from 'astro:actions';
+  import Swal from 'sweetalert2';
+
+   const modal= document.getElementById('modal-agregar');
+
+  const form = document.querySelector('form') as HTMLFormElement;
+  const btnSubmit = document.querySelector('#btn-submit') as HTMLButtonElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btnSubmit.setAttribute('disabled', 'disabled');
+
+
+    const formData = new FormData(form);
+
+    const { data, error } = await actions.registerUserNoSession(formData);
+    modal.close();
+
+    if (error) {
+      console.log(error.message)
+      Swal.fire({
+        icon: 'error',
+        title: 'Credenciales no son correctas',
+        text: error.message,
+      });
+      btnSubmit.removeAttribute('disabled');
+      return;
+    }
+
+    // esto esta bien
+   //  window.location.replace('/protected');
+
+
+    /* if (data?.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Registro exitoso!',
+        text: data.msg || 'Usuario creado correctamente',
+        confirmButtonColor: '#4ade80',
+      });
+      
+      window.location.replace('/protected');
+    }*/ 
+
+     if (data?.success) {
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Registro exitoso!',
+        html: `
+          <div class="text-center">
+            <p class="mb-2"><strong>${data.message || 'Usuario creado correctamente'}</strong></p>
+            <p class="text-sm text-gray-600">Se ha enviado un correo de verificación a tu email.</p>
+            <p class="text-sm text-gray-600 mt-2">Serás redirigido al área protegida...</p>
+          </div>
+        `,
+        confirmButtonText: 'Continuar',
+        confirmButtonColor: '#4ade80',
+        allowOutsideClick: false,
+      });
+    }
+   
+  });
+</script>

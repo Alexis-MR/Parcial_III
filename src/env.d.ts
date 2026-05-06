@@ -9,6 +9,8 @@ interface User {
   avatar: string;
   emailVerified: boolean;
   rol: string; 
+  telefono: string;
+  direccion: string;
   created_at: string;
 }
 

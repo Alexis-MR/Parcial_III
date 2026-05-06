@@ -1,6 +1,7 @@
 ---
 import { createSupabaseServerClient } from '@/lib/supabase';
-import { Plus, Search, FileText } from 'lucide-astro';
+import { Plus, Search, FileText, Delete } from 'lucide-astro';
+import Agregar from './Agregar.astro';
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -14,6 +15,10 @@ const { data: usuarios } = await supabase
 ---
 
 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+<dialog id="modal-agregar" title="Agregar Usuario">
+     <button onclick="document.getElementById('modal-agregar').close()">X</button>
+  <Agregar />
+</dialog>
 
   <!-- Header -->
   <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -25,7 +30,8 @@ const { data: usuarios } = await supabase
 
   <!-- Botonera superior -->
   <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-    <button
+    <button 
+      onclick="document.getElementById('modal-agregar').showModal()"
       id="btn-add"
       class="text-xs bg-green-50 hover:bg-green-100 text-green-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium flex items-center gap-1"
     >
@@ -61,6 +67,8 @@ const { data: usuarios } = await supabase
           <th class="px-6 py-3 text-left">Nombre</th>
           <th class="px-6 py-3 text-left">Email</th>
           <th class="px-6 py-3 text-left">Rol</th>
+          <th class="px-6 py-3 text-left">Telefono</th>
+          <th class="px-6 py-3 text-left">Direccion</th>
           <th class="px-6 py-3 text-left">Creado</th>
           <th class="px-6 py-3 text-left">Acciones</th>
         </tr>
@@ -75,6 +83,8 @@ const { data: usuarios } = await supabase
             data-fullname={u.name}
             data-fullemail={u.email}
             data-rol={u.rol}
+            data-telefono={u.telefono}
+            data-direccion={u.direccion}
             data-created={u.created_at ?? ''}
           >
             <td class="px-6 py-4 text-sm text-slate-400">#{u.id}</td>
@@ -94,6 +104,8 @@ const { data: usuarios } = await supabase
                 {u.rol}
               </span>
             </td>
+            <td class="px-6 py-4 text-sm text-slate-500">{u.telefono ?? '—'}</td>
+            <td class="px-6 py-4 text-sm text-slate-500">{u.direccion ?? '—'}</td>
             <td class="px-6 py-4 text-sm text-slate-400">
               {u.created_at ? new Date(u.created_at).toLocaleDateString('es-ES') : '—'}
             </td>
@@ -485,4 +497,14 @@ const { data: usuarios } = await supabase
     if (!row) return;
     if (btn.dataset.action === 'edit') openModal(row);
   });
+
+const dialog = document.getElementById("modal-agregar");
+const showButton = document.getElementById("btn-add");
+const closeButton = document.getElementById("btn-cancel");
+
+// "Show the dialog" button opens the dialog modally
+
+
+// "Close" button closes the dialog
+
 </script>
