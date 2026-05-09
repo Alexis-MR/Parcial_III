@@ -1,16 +1,5 @@
-// src/pages/api/usuarios/[id].ts
 import type { APIRoute } from 'astro';
-import { createSupabaseServerClient } from '@/lib/supabase';
-import { createClient } from '@supabase/supabase-js';
-
-function createSupabaseAdminClient() {
-  const url    = import.meta.env.PUBLIC_SUPABASE_URL;
-  const secret = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !secret) throw new Error('Faltan variables de entorno de Supabase');
-  return createClient(url, secret, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
+import { createSupabaseServerClient, supabaseAdmin } from '@/lib/supabase';
 
 export const PUT: APIRoute = async ({ params, request, cookies }) => {
   const supabase = createSupabaseServerClient({ request, cookies });
@@ -39,7 +28,6 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
   const { name, email, rol } = body;
   if (!name || !email || !rol) return json({ message: 'Faltan campos requeridos' }, 400);
 
-  // Obtener auth_id del usuario a editar
   const { data: targetUser, error: fetchError } = await supabase
     .from('usuarios')
     .select('auth_id, email')
@@ -49,24 +37,16 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
   if (fetchError || !targetUser) return json({ message: 'Usuario no encontrado' }, 404);
 
   if (!targetUser.auth_id) {
-    return json({ message: 'Usuario sin auth_id vinculado. Ejecuta el SQL de vinculación.' }, 500);
+    return json({ message: 'Usuario sin auth_id vinculado.' }, 500);
   }
 
-  // Actualizar en auth.users: nombre Y email siempre
-  const adminClient = createSupabaseAdminClient();
-  const { error: authError } = await adminClient.auth.admin.updateUserById(
+  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
     targetUser.auth_id,
-    {
-      email,                          // actualiza email en auth.users
-      user_metadata: { name },        // actualiza display name en auth.users
-    }
+    { email, user_metadata: { name } }
   );
 
-  if (authError) {
-    return json({ message: `Error en Auth: ${authError.message}` }, 500);
-  }
+  if (authError) return json({ message: `Error en Auth: ${authError.message}` }, 500);
 
-  // Actualizar tabla pública usuarios
   const { data, error } = await supabase
     .from('usuarios')
     .update({ name, email, rol })
@@ -77,6 +57,55 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
   if (error) return json({ message: error.message }, 500);
 
   return json({ user: data }, 200);
+};
+
+export const DELETE: APIRoute = async ({ params, request, cookies }) => {
+  const supabase = createSupabaseServerClient({ request, cookies });
+  const { data: { session } } = await supabase.auth.getSession();
+
+  console.log('=== DELETE llamado ===');
+  console.log('ID:', params.id);
+  console.log('Session:', session?.user?.email ?? 'SIN SESIÓN');
+  console.log('Cookie:', request.headers.get('Cookie'));
+
+  if (!session) return json({ message: 'No autorizado' }, 401);
+
+  const { data: currentUser } = await supabase
+    .from('usuarios')
+    .select('rol')
+    .eq('email', session.user.email)
+    .single();
+
+  if (currentUser?.rol !== 'admin') return json({ message: 'Acceso denegado' }, 403);
+
+  const id = params.id;
+  if (!id) return json({ message: 'ID requerido' }, 400);
+
+  const { data: targetUser, error: fetchError } = await supabase
+    .from('usuarios')
+    .select('auth_id')
+    .eq('id', id)
+    .single();
+
+  if (fetchError || !targetUser) return json({ message: 'Usuario no encontrado' }, 404);
+
+  const { error: dbError } = await supabase
+    .from('usuarios')
+    .delete()
+    .eq('id', id);
+
+  if (dbError) return json({ message: dbError.message }, 500);
+
+  if (targetUser.auth_id) {
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
+      targetUser.auth_id
+    );
+    if (authError) {
+      console.warn('No se pudo borrar de auth.users:', authError.message);
+    }
+  }
+
+  return json({ message: 'Usuario eliminado correctamente' }, 200);
 };
 
 function json(body: object, status: number) {

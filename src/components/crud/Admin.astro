@@ -1,6 +1,8 @@
+
+
 ---
 import { createSupabaseServerClient } from '@/lib/supabase';
-import { Plus, Search, FileText, Delete } from 'lucide-astro';
+import { Plus, Search, FileText } from 'lucide-astro';
 import Agregar from './Agregar.astro';
 
 const supabase = createSupabaseServerClient({
@@ -15,10 +17,10 @@ const { data: usuarios } = await supabase
 ---
 
 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-<dialog id="modal-agregar" title="Agregar Usuario">
-     <button onclick="document.getElementById('modal-agregar').close()">X</button>
-  <Agregar />
-</dialog>
+  <dialog id="modal-agregar" title="Agregar Usuario">
+    <button onclick="document.getElementById('modal-agregar').close()">X</button>
+    <Agregar />
+  </dialog>
 
   <!-- Header -->
   <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -30,7 +32,7 @@ const { data: usuarios } = await supabase
 
   <!-- Botonera superior -->
   <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-    <button 
+    <button
       onclick="document.getElementById('modal-agregar').showModal()"
       id="btn-add"
       class="text-xs bg-green-50 hover:bg-green-100 text-green-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium flex items-center gap-1"
@@ -179,8 +181,6 @@ const { data: usuarios } = await supabase
 
       <div>
         <label class="block text-xs font-medium text-slate-600 mb-1">Rol</label>
-        <!-- IMPORTANTE: los valores deben coincidir exactamente con tu constraint en Supabase -->
-        <!-- Si el error persiste, revisa en Supabase: Table Editor > usuarios > columna rol > Check constraints -->
         <select id="edit-rol"
           class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors bg-white">
           <option value="usuario">usuario</option>
@@ -200,6 +200,33 @@ const { data: usuarios } = await supabase
         class="text-xs px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors font-medium flex items-center gap-2">
         <span id="modal-save-text">Guardar cambios</span>
         <span id="modal-spinner" class="hidden w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL CONFIRMAR ELIMINAR ===================== -->
+<div id="modal-delete" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm mx-4 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h2 class="text-base font-semibold text-slate-800">Confirmar eliminación</h2>
+    </div>
+    <div class="px-6 py-5">
+      <p class="text-sm text-slate-600">
+        ¿Estás seguro de que deseas eliminar a
+        <strong id="delete-username" class="text-slate-800"></strong>?
+        Esta acción no se puede deshacer.
+      </p>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+      <button id="delete-cancel"
+        class="text-xs px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium">
+        Cancelar
+      </button>
+      <button id="delete-confirm"
+        class="text-xs px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors font-medium flex items-center gap-2">
+        <span id="delete-confirm-text">Sí, eliminar</span>
+        <span id="delete-spinner" class="hidden w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
       </button>
     </div>
   </div>
@@ -256,7 +283,7 @@ const { data: usuarios } = await supabase
   filteredRows = allRows;
   renderPage();
 
-  // ===================== MODAL =====================
+  // ===================== MODAL EDITAR =====================
   const modal         = document.getElementById('modal-edit')!;
   const modalClose    = document.getElementById('modal-close')!;
   const modalCancel   = document.getElementById('modal-cancel')!;
@@ -309,18 +336,19 @@ const { data: usuarios } = await supabase
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/usuarios/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, rol }),
-      });
+      // En modalSave.addEventListener
+const res = await fetch(`/api/usuarios/${id}`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name, email, rol }),
+  credentials: 'include',   // <-- agregar aquí también
+});
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.message ?? 'Error al actualizar');
       }
 
-      // Actualizar DOM sin recargar
       const row = document.querySelector(`.usuario-row[data-id="${id}"]`) as HTMLElement;
       if (row) {
         row.dataset.fullname  = name;
@@ -356,9 +384,76 @@ const { data: usuarios } = await supabase
     }
   });
 
-  // ===================== PDF GLOBAL (sin autotable, jsPDF puro) =====================
+  // ===================== MODAL ELIMINAR =====================
+  const modalDelete       = document.getElementById('modal-delete')!;
+  const deleteCancel      = document.getElementById('delete-cancel')!;
+  const deleteConfirm     = document.getElementById('delete-confirm') as HTMLButtonElement;
+  const deleteConfirmText = document.getElementById('delete-confirm-text')!;
+  const deleteSpinner     = document.getElementById('delete-spinner')!;
+  const deleteUsername    = document.getElementById('delete-username')!;
+
+  let pendingDeleteId: string | null = null;
+  let pendingDeleteRow: HTMLElement | null = null;
+
+  const openDeleteModal = (row: HTMLElement) => {
+    pendingDeleteId  = row.dataset.id ?? null;
+    pendingDeleteRow = row;
+    deleteUsername.textContent = row.dataset.fullname ?? 'este usuario';
+    modalDelete.classList.remove('hidden');
+    modalDelete.classList.add('flex');
+  };
+
+  const closeDeleteModal = () => {
+    modalDelete.classList.add('hidden');
+    modalDelete.classList.remove('flex');
+    pendingDeleteId  = null;
+    pendingDeleteRow = null;
+  };
+
+  const setDeleteLoading = (on: boolean) => {
+    deleteConfirm.disabled = on;
+    deleteConfirmText.textContent = on ? 'Eliminando...' : 'Sí, eliminar';
+    deleteSpinner.classList.toggle('hidden', !on);
+  };
+
+  deleteCancel.addEventListener('click', closeDeleteModal);
+  modalDelete.addEventListener('click', e => { if (e.target === modalDelete) closeDeleteModal(); });
+
+  deleteConfirm.addEventListener('click', async () => {
+    if (!pendingDeleteId || !pendingDeleteRow) return;
+
+    setDeleteLoading(true);
+    try {
+     const res = await fetch(`/api/usuarios/${pendingDeleteId}`, {
+  method: 'DELETE',
+  credentials: 'include',   // <-- esto envía las cookies de sesión
+});
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data?.message ?? 'Error al eliminar');
+        return;
+      }
+
+      // Quitar fila del DOM y actualizar paginación
+      const rowToRemove = pendingDeleteRow;
+      closeDeleteModal();
+      rowToRemove.remove();
+      filteredRows = filteredRows.filter(r => r !== rowToRemove);
+      if ((currentPage - 1) * PER_PAGE >= filteredRows.length && currentPage > 1) {
+        currentPage--;
+      }
+      renderPage();
+
+    } catch {
+      alert('Error de red al intentar eliminar');
+    } finally {
+      setDeleteLoading(false);
+    }
+  });
+
+  // ===================== PDF =====================
   document.getElementById('btn-pdf')?.addEventListener('click', async () => {
-    // Carga dinámica de jsPDF para evitar problemas de timing con script tags
     if (!(window as any).jspdf) {
       await new Promise<void>((resolve, reject) => {
         const s = document.createElement('script');
@@ -372,10 +467,9 @@ const { data: usuarios } = await supabase
     // @ts-ignore
     const { jsPDF } = window.jspdf;
     const doc  = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pageW = doc.internal.pageSize.getWidth();   // 297mm
-    const pageH = doc.internal.pageSize.getHeight();  // 210mm
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
 
-    // ── Encabezado ──
     doc.setFillColor(34, 197, 94);
     doc.rect(0, 0, pageW, 26, 'F');
     doc.setTextColor(255, 255, 255);
@@ -386,81 +480,57 @@ const { data: usuarios } = await supabase
     doc.setFontSize(8);
     doc.text('Uni-Space Technologies S.A. de C.V.', pageW / 2, 20, { align: 'center' });
 
-    // ── Configuración de tabla ──
     const cols = [
-      { header: 'ID',                 w: 16  },
-      { header: 'Nombre',             w: 60  },
-      { header: 'Email',              w: 80  },
-      { header: 'Rol',                w: 24  },
-      { header: 'Fecha de Registro',  w: 38  },
+      { header: 'ID',                w: 16 },
+      { header: 'Nombre',            w: 60 },
+      { header: 'Email',             w: 80 },
+      { header: 'Rol',               w: 24 },
+      { header: 'Fecha de Registro', w: 38 },
     ];
-    const marginL  = 14;
-    const rowH     = 8;
-    const headerH  = 9;
-    let   curY     = 32;
+    const marginL = 14;
+    const rowH    = 8;
+    const headerH = 9;
+    let curY      = 32;
 
-    // Colores
-    const COL_HEADER_BG  = [30,  41,  59];   // slate-800
-    const COL_ROW_ALT    = [248, 250, 252];   // slate-50
-    const COL_BORDER     = [226, 232, 240];   // slate-200
-    const COL_TEXT_DARK  = [30,  41,  59];
-    const COL_TEXT_LIGHT = [100, 116, 139];   // slate-500
+    const COL_HEADER_BG  = [30,  41,  59] as [number,number,number];
+    const COL_ROW_ALT    = [248, 250, 252] as [number,number,number];
+    const COL_BORDER     = [226, 232, 240] as [number,number,number];
+    const COL_TEXT_DARK  = [30,  41,  59] as [number,number,number];
+    const COL_TEXT_LIGHT = [100, 116, 139] as [number,number,number];
 
     const drawHeader = () => {
-      doc.setFillColor(...COL_HEADER_BG as [number,number,number]);
+      doc.setFillColor(...COL_HEADER_BG);
       doc.rect(marginL, curY, cols.reduce((a, c) => a + c.w, 0), headerH, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       let x = marginL;
-      cols.forEach(col => {
-        doc.text(col.header, x + 2, curY + 6);
-        x += col.w;
-      });
+      cols.forEach(col => { doc.text(col.header, x + 2, curY + 6); x += col.w; });
       curY += headerH;
     };
 
     const drawRow = (cells: string[], rowIndex: number) => {
-      // Salto de página si es necesario
-      if (curY + rowH > pageH - 14) {
-        doc.addPage();
-        curY = 14;
-        drawHeader();
-      }
-
-      // Fondo alterno
+      if (curY + rowH > pageH - 14) { doc.addPage(); curY = 14; drawHeader(); }
       if (rowIndex % 2 === 1) {
-        doc.setFillColor(...COL_ROW_ALT as [number,number,number]);
+        doc.setFillColor(...COL_ROW_ALT);
         doc.rect(marginL, curY, cols.reduce((a, c) => a + c.w, 0), rowH, 'F');
       }
-
-      // Borde inferior fila
-      doc.setDrawColor(...COL_BORDER as [number,number,number]);
+      doc.setDrawColor(...COL_BORDER);
       doc.setLineWidth(0.1);
       doc.line(marginL, curY + rowH, marginL + cols.reduce((a, c) => a + c.w, 0), curY + rowH);
-
-      // Texto
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       let x = marginL;
       cells.forEach((cell, ci) => {
-        const col = cols[ci];
-        const isId  = ci === 0;
-        const isRol = ci === 3;
-        doc.setTextColor(...(isId || isRol ? COL_TEXT_LIGHT : COL_TEXT_DARK) as [number,number,number]);
-        // Truncar si el texto es muy largo
-        const maxW = col.w - 4;
-        const txt  = doc.splitTextToSize(cell, maxW)[0] ?? '';
+        doc.setTextColor(...(ci === 0 || ci === 3 ? COL_TEXT_LIGHT : COL_TEXT_DARK));
+        const txt = doc.splitTextToSize(cell, cols[ci].w - 4)[0] ?? '';
         doc.text(txt, x + 2, curY + 5.5);
-        x += col.w;
+        x += cols[ci].w;
       });
-
       curY += rowH;
     };
 
     drawHeader();
-
-    // ── Datos ──
     const rows = Array.from(document.querySelectorAll('.usuario-row')) as HTMLElement[];
     rows.forEach((row, i) => {
       drawRow([
@@ -468,13 +538,10 @@ const { data: usuarios } = await supabase
         row.dataset.fullname  ?? '',
         row.dataset.fullemail ?? '',
         (row.dataset.rol ?? '').toUpperCase(),
-        row.dataset.created
-          ? new Date(row.dataset.created).toLocaleDateString('es-ES')
-          : '—',
+        row.dataset.created ? new Date(row.dataset.created).toLocaleDateString('es-ES') : '—',
       ], i);
     });
 
-    // ── Footer ──
     const totalPages = (doc as any).internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
@@ -485,7 +552,6 @@ const { data: usuarios } = await supabase
         pageW / 2, pageH - 6, { align: 'center' }
       );
     }
-
     doc.save(`reporte_usuarios_${new Date().toISOString().slice(0, 10)}.pdf`);
   });
 
@@ -495,16 +561,9 @@ const { data: usuarios } = await supabase
     if (!btn) return;
     const row = document.querySelector(`.usuario-row[data-id="${btn.dataset.id}"]`) as HTMLElement;
     if (!row) return;
-    if (btn.dataset.action === 'edit') openModal(row);
+    if (btn.dataset.action === 'edit')   openModal(row);
+    if (btn.dataset.action === 'delete') openDeleteModal(row);
   });
-
-const dialog = document.getElementById("modal-agregar");
-const showButton = document.getElementById("btn-add");
-const closeButton = document.getElementById("btn-cancel");
-
-// "Show the dialog" button opens the dialog modally
-
-
-// "Close" button closes the dialog
-
+  
 </script>
+
