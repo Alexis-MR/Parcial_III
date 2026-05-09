@@ -76,24 +76,37 @@ import AuthLayout from "../layouts/AuthLayout.astro";
   const btnGoogle = document.querySelector('#btn-google') as HTMLButtonElement;
 
   // ── Login con email/password ──
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    btnSubmit.setAttribute('disabled', 'disabled');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  btnSubmit.setAttribute('disabled', 'disabled');
 
-    const formData = new FormData(form);
+  const formData = new FormData(form);
 
-    try {
-      await actions.loginUser(formData);
-      window.location.replace('/protected');
-    } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error al ingresar',
-        text: error.message,
-      });
-      btnSubmit.removeAttribute('disabled');
-    }
+    console.log('FormData:', Object.fromEntries(formData));
+
+try {
+  const result = await actions.loginUser(formData);
+  
+  if (result.error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error al ingresar',
+      text: result.error.message,
+    });
+    btnSubmit.removeAttribute('disabled');
+    return;
+  }
+
+  window.location.replace('/protected');
+} catch (error: any) {
+  Swal.fire({
+    icon: 'error',
+    title: 'Error al ingresar',
+    text: 'Error inesperado',
   });
+  btnSubmit.removeAttribute('disabled');
+}
+});
 
   // ── Login con Google — directo desde el cliente, sin action ──
   btnGoogle.addEventListener('click', async () => {

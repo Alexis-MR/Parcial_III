@@ -18,14 +18,14 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
   const id = params.id;
   if (!id) return json({ message: 'ID requerido' }, 400);
 
-  let body: { name?: string; email?: string; rol?: string };
+  let body: { name?: string; email?: string; rol?: string; telefono?: string; direccion?: string };
   try {
     body = await request.json();
   } catch {
     return json({ message: 'Cuerpo inválido' }, 400);
   }
 
-  const { name, email, rol } = body;
+  const { name, email, rol, telefono, direccion } = body;
   if (!name || !email || !rol) return json({ message: 'Faltan campos requeridos' }, 400);
 
   const { data: targetUser, error: fetchError } = await supabase
@@ -49,7 +49,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
 
   const { data, error } = await supabase
     .from('usuarios')
-    .update({ name, email, rol })
+    .update({ name, email, rol, telefono, direccion })
     .eq('id', id)
     .select()
     .single();

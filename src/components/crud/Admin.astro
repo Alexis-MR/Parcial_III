@@ -186,6 +186,20 @@ const { data: usuarios } = await supabase
           <option value="usuario">usuario</option>
           <option value="admin">admin</option>
         </select>
+
+        <div>
+  <label class="block text-xs font-medium text-slate-600 mb-1">Teléfono</label>
+  <input id="edit-telefono" type="tel"
+    class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
+    placeholder="+503 7000-0000" />
+</div>
+
+<div>
+  <label class="block text-xs font-medium text-slate-600 mb-1">Dirección</label>
+  <input id="edit-direccion" type="text"
+    class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
+    placeholder="San Salvador, El Salvador" />
+</div>
       </div>
 
       <div id="edit-message" class="hidden text-xs px-3 py-2 rounded-lg"></div>
@@ -295,12 +309,16 @@ const { data: usuarios } = await supabase
   const editName      = document.getElementById('edit-name')  as HTMLInputElement;
   const editEmail     = document.getElementById('edit-email') as HTMLInputElement;
   const editRol       = document.getElementById('edit-rol')   as HTMLSelectElement;
+  const editTelefono  = document.getElementById('edit-telefono')  as HTMLInputElement;
+  const editDireccion = document.getElementById('edit-direccion') as HTMLInputElement;
 
   const openModal = (row: HTMLElement) => {
     editId.value    = row.dataset.id ?? '';
     editName.value  = row.dataset.fullname ?? '';
     editEmail.value = row.dataset.fullemail ?? '';
     editRol.value   = row.dataset.rol ?? 'usuario';
+    editTelefono.value  = row.dataset.telefono ?? '';
+    editDireccion.value = row.dataset.direccion ?? '';
     editMessage.className = 'hidden';
     editMessage.textContent = '';
     modal.classList.remove('hidden');
@@ -331,6 +349,8 @@ const { data: usuarios } = await supabase
     const name  = editName.value.trim();
     const email = editEmail.value.trim();
     const rol   = editRol.value;
+    const telefono  = editTelefono.value.trim();
+    const direccion = editDireccion.value.trim();
 
     if (!name || !email) { showMsg('Completa todos los campos.', 'error'); return; }
 
@@ -340,7 +360,7 @@ const { data: usuarios } = await supabase
 const res = await fetch(`/api/usuarios/${id}`, {
   method: 'PUT',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ name, email, rol }),
+  body: JSON.stringify({ name, email, rol, telefono, direccion }),
   credentials: 'include',   // <-- agregar aquí también
 });
 
@@ -356,6 +376,8 @@ const res = await fetch(`/api/usuarios/${id}`, {
         row.dataset.rol       = rol;
         row.dataset.name      = name.toLowerCase();
         row.dataset.email     = email.toLowerCase();
+        row.dataset.telefono  = telefono;
+        row.dataset.direccion = direccion;
 
         const nameEl = row.querySelector('.user-name-display');
         if (nameEl) nameEl.textContent = name;
@@ -373,6 +395,14 @@ const res = await fetch(`/api/usuarios/${id}`, {
 
         const initials = row.querySelector('.user-initials');
         if (initials) initials.textContent = name.substring(0, 2).toUpperCase();
+
+        row.dataset.telefono  = telefono;
+        row.dataset.direccion = direccion;
+
+        const cells = row.querySelectorAll('td');
+        if (cells[4]) cells[4].textContent = telefono || '—';
+        if (cells[5]) cells[5].textContent = direccion || '—';
+
       }
 
       showMsg('Usuario actualizado correctamente.', 'success');
@@ -538,6 +568,7 @@ const res = await fetch(`/api/usuarios/${id}`, {
         row.dataset.fullname  ?? '',
         row.dataset.fullemail ?? '',
         (row.dataset.rol ?? '').toUpperCase(),
+        
         row.dataset.created ? new Date(row.dataset.created).toLocaleDateString('es-ES') : '—',
       ], i);
     });
