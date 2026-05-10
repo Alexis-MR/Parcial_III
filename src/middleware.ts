@@ -1,4 +1,3 @@
-import type { MiddlewareNext } from 'astro';
 import { defineMiddleware } from 'astro:middleware';
 import { createSupabaseServerClient } from './lib/supabase';
 
@@ -16,20 +15,21 @@ export const onRequest = defineMiddleware(
     locals.isLoggedIn = isLoggedIn;
 
     if (user) {
-      // Traer nombre Y rol desde tabla usuarios (fuente de verdad)
       const { data: usuario } = await supabase
         .from('usuarios')
-        .select('name, rol')
+        .select('name, rol, telefono, direccion, created_at')
         .eq('email', user.email)
         .single();
 
       locals.user = {
         avatar: user.user_metadata?.avatar_url ?? '',
         email: user.email!,
-        // Prioriza el name de tu tabla; si no existe, usa el de Google/metadata
         name: usuario?.name ?? user.user_metadata?.name ?? '',
         emailVerified: !!user.email_confirmed_at,
         rol: usuario?.rol ?? 'usuario',
+        telefono: usuario?.telefono ?? '',
+        direccion: usuario?.direccion ?? '',
+        created_at: usuario?.created_at ?? '',
       };
     }
 

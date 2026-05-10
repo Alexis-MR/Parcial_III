@@ -1,4 +1,3 @@
-// src/actions/auth/login.action.ts
 import { createSupabaseServerClient } from '@/lib/supabase';
 import { defineAction } from 'astro:actions';
 import { z } from 'astro:schema';
@@ -14,7 +13,6 @@ export const loginUser = defineAction({
     const { cookies, request } = context;
     const supabase = createSupabaseServerClient({ request, cookies });
 
-    // Cookies
     if (remember_me) {
       cookies.set('email', email, {
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
@@ -34,7 +32,6 @@ export const loginUser = defineAction({
         throw error;
       }
 
-      // ✅ Retorna solo datos serializables
       return {
         success: true,
         user: {
@@ -42,13 +39,11 @@ export const loginUser = defineAction({
           email: data.user?.email,
           displayName: data.user?.user_metadata?.name,
           emailVerified: !!data.user?.email_confirmed_at,
-          rol: data.user?.rol,
-          // Solo incluye campos que sean strings, numbers, booleans o objetos simples
+          rol: data.user?.user_metadata?.rol ?? 'usuario',
         }
       };
 
     } catch (error: any) {
-      // Manejo específico de errores
       if (error.message.includes('Invalid login credentials')) {
         throw new Error('Email o contraseña incorrectos');
       }

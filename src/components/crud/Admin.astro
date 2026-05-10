@@ -1,5 +1,3 @@
-
-
 ---
 import { createSupabaseServerClient } from '@/lib/supabase';
 import { Plus, Search, FileText } from 'lucide-astro';
@@ -186,20 +184,20 @@ const { data: usuarios } = await supabase
           <option value="usuario">usuario</option>
           <option value="admin">admin</option>
         </select>
+      </div>
 
-        <div>
-  <label class="block text-xs font-medium text-slate-600 mb-1">Teléfono</label>
-  <input id="edit-telefono" type="tel"
-    class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
-    placeholder="+503 7000-0000" />
-</div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Teléfono</label>
+        <input id="edit-telefono" type="tel"
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
+          placeholder="+503 7000-0000" />
+      </div>
 
-<div>
-  <label class="block text-xs font-medium text-slate-600 mb-1">Dirección</label>
-  <input id="edit-direccion" type="text"
-    class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
-    placeholder="San Salvador, El Salvador" />
-</div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Dirección</label>
+        <input id="edit-direccion" type="text"
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-colors"
+          placeholder="San Salvador, El Salvador" />
       </div>
 
       <div id="edit-message" class="hidden text-xs px-3 py-2 rounded-lg"></div>
@@ -262,7 +260,7 @@ const { data: usuarios } = await supabase
   const allRows        = Array.from(document.querySelectorAll('.usuario-row')) as HTMLElement[];
 
   function getFilteredRows(q: string) {
-    return q ? allRows.filter(r => r.dataset.name?.includes(q) || r.dataset.email?.includes(q)) : allRows;
+    return q ? allRows.filter(r => r.dataset.name?.includes(q) || r.dataset.email?.includes(q)) : [...allRows];
   }
 
   function renderPage() {
@@ -294,7 +292,7 @@ const { data: usuarios } = await supabase
   });
   btnPrev.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPage(); } });
   btnNext.addEventListener('click', () => { if (currentPage < Math.ceil(filteredRows.length / PER_PAGE)) { currentPage++; renderPage(); } });
-  filteredRows = allRows;
+  filteredRows = [...allRows];
   renderPage();
 
   // ===================== MODAL EDITAR =====================
@@ -313,10 +311,10 @@ const { data: usuarios } = await supabase
   const editDireccion = document.getElementById('edit-direccion') as HTMLInputElement;
 
   const openModal = (row: HTMLElement) => {
-    editId.value    = row.dataset.id ?? '';
-    editName.value  = row.dataset.fullname ?? '';
-    editEmail.value = row.dataset.fullemail ?? '';
-    editRol.value   = row.dataset.rol ?? 'usuario';
+    editId.value        = row.dataset.id ?? '';
+    editName.value      = row.dataset.fullname ?? '';
+    editEmail.value     = row.dataset.fullemail ?? '';
+    editRol.value       = row.dataset.rol ?? 'usuario';
     editTelefono.value  = row.dataset.telefono ?? '';
     editDireccion.value = row.dataset.direccion ?? '';
     editMessage.className = 'hidden';
@@ -345,10 +343,10 @@ const { data: usuarios } = await supabase
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
   modalSave.addEventListener('click', async () => {
-    const id    = editId.value;
-    const name  = editName.value.trim();
-    const email = editEmail.value.trim();
-    const rol   = editRol.value;
+    const id        = editId.value;
+    const name      = editName.value.trim();
+    const email     = editEmail.value.trim();
+    const rol       = editRol.value;
     const telefono  = editTelefono.value.trim();
     const direccion = editDireccion.value.trim();
 
@@ -356,13 +354,12 @@ const { data: usuarios } = await supabase
 
     setLoading(true);
     try {
-      // En modalSave.addEventListener
-const res = await fetch(`/api/usuarios/${id}`, {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ name, email, rol, telefono, direccion }),
-  credentials: 'include',   // <-- agregar aquí también
-});
+      const res = await fetch(`/api/usuarios/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, rol, telefono, direccion }),
+        credentials: 'include',
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -396,13 +393,9 @@ const res = await fetch(`/api/usuarios/${id}`, {
         const initials = row.querySelector('.user-initials');
         if (initials) initials.textContent = name.substring(0, 2).toUpperCase();
 
-        row.dataset.telefono  = telefono;
-        row.dataset.direccion = direccion;
-
         const cells = row.querySelectorAll('td');
         if (cells[4]) cells[4].textContent = telefono || '—';
         if (cells[5]) cells[5].textContent = direccion || '—';
-
       }
 
       showMsg('Usuario actualizado correctamente.', 'success');
@@ -454,10 +447,10 @@ const res = await fetch(`/api/usuarios/${id}`, {
 
     setDeleteLoading(true);
     try {
-     const res = await fetch(`/api/usuarios/${pendingDeleteId}`, {
-  method: 'DELETE',
-  credentials: 'include',   // <-- esto envía las cookies de sesión
-});
+      const res = await fetch(`/api/usuarios/${pendingDeleteId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -465,14 +458,11 @@ const res = await fetch(`/api/usuarios/${id}`, {
         return;
       }
 
-      // Quitar fila del DOM y actualizar paginación
       const rowToRemove = pendingDeleteRow;
       closeDeleteModal();
       rowToRemove.remove();
       filteredRows = filteredRows.filter(r => r !== rowToRemove);
-      if ((currentPage - 1) * PER_PAGE >= filteredRows.length && currentPage > 1) {
-        currentPage--;
-      }
+      if ((currentPage - 1) * PER_PAGE >= filteredRows.length && currentPage > 1) currentPage--;
       renderPage();
 
     } catch {
@@ -496,7 +486,7 @@ const res = await fetch(`/api/usuarios/${id}`, {
 
     // @ts-ignore
     const { jsPDF } = window.jspdf;
-    const doc  = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const doc   = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
 
@@ -568,7 +558,6 @@ const res = await fetch(`/api/usuarios/${id}`, {
         row.dataset.fullname  ?? '',
         row.dataset.fullemail ?? '',
         (row.dataset.rol ?? '').toUpperCase(),
-        
         row.dataset.created ? new Date(row.dataset.created).toLocaleDateString('es-ES') : '—',
       ], i);
     });
@@ -595,6 +584,59 @@ const res = await fetch(`/api/usuarios/${id}`, {
     if (btn.dataset.action === 'edit')   openModal(row);
     if (btn.dataset.action === 'delete') openDeleteModal(row);
   });
-  
-</script>
 
+  // ===================== AGREGAR USUARIO SIN F5 =====================
+  window.addEventListener('usuario-agregado', (e: Event) => {
+    const u = (e as CustomEvent).detail;
+    const tempId = Date.now().toString();
+    const tbody = document.getElementById('tabla-body')!;
+
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50 transition-colors usuario-row';
+    tr.dataset.name      = u.name?.toLowerCase();
+    tr.dataset.email     = u.email?.toLowerCase();
+    tr.dataset.id        = tempId;
+    tr.dataset.fullname  = u.name;
+    tr.dataset.fullemail = u.email;
+    tr.dataset.rol       = u.rol ?? 'usuario';
+    tr.dataset.telefono  = u.telefono ?? '';
+    tr.dataset.direccion = u.direccion ?? '';
+    tr.dataset.created   = u.created_at ?? '';
+
+    const initials = u.name?.substring(0, 2).toUpperCase() ?? 'NA';
+    const fechaStr = u.created_at ? new Date(u.created_at).toLocaleDateString('es-ES') : '—';
+    const rolClass = u.rol === 'admin' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600';
+
+    tr.innerHTML = `
+      <td class="px-6 py-4 text-sm text-slate-400">#—</td>
+      <td class="px-6 py-4">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold user-initials">${initials}</span>
+          </div>
+          <span class="text-sm font-medium text-slate-700 user-name-display">${u.name}</span>
+        </div>
+      </td>
+      <td class="px-6 py-4 text-sm text-slate-500 user-email-display">${u.email}</td>
+      <td class="px-6 py-4">
+        <span class="text-xs px-2 py-1 rounded-full font-medium user-rol-badge ${rolClass}">${u.rol ?? 'usuario'}</span>
+      </td>
+      <td class="px-6 py-4 text-sm text-slate-500">${u.telefono || '—'}</td>
+      <td class="px-6 py-4 text-sm text-slate-500">${u.direccion || '—'}</td>
+      <td class="px-6 py-4 text-sm text-slate-400">${fechaStr}</td>
+      <td class="px-6 py-4">
+        <div class="flex gap-2">
+          <button class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium" data-id="${tempId}" data-action="edit">Editar</button>
+          <button class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium" data-id="${tempId}" data-action="delete">Eliminar</button>
+        </div>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+    allRows.push(tr);
+    filteredRows = getFilteredRows(searchInput.value.toLowerCase().trim());
+    if (filteredRows[filteredRows.length - 1] !== tr) filteredRows.push(tr);
+    currentPage = Math.ceil(filteredRows.length / PER_PAGE);
+    renderPage();
+  });
+</script>
